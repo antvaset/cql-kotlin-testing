@@ -35,7 +35,6 @@ for (const ig of igs) {
   for (const inputSubdir of inputSubdirs) {
     const inputDir = `${__dirname}/tmp/${dir}${inputSubdir}`;
     if (fs.existsSync(inputDir)) {
-
       // Compile CQL
       execSync(
         `cd ${masterSrc} && ./cql-to-elm-cli/build/install/cql-to-elm-cli/bin/cql-to-elm-cli --input ${inputDir} --output ${__dirname}/tmp/${dir}/master`,
