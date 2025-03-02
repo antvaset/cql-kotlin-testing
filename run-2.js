@@ -43,9 +43,22 @@ function normalizeXml(node, namespacesFromParents) {
       // skip
     } else if (attr.name === "xsi:type") {
       // Ignore xsi:type
-      // attributesUnsorted[attr.name] = parseIntoQname(attr.value, allNamespaces);
-    } else if (attr.name.includes(":")) {
-      attributesUnsorted[attr.name.split(":")[1]] = attr.value;
+
+      const xsiType = parseIntoQname(attr.value, allNamespaces);
+      if (
+        [
+          "AliasedQuerySource",
+          "Property",
+          "ExpressionRef",
+          "ExpressionDef",
+        ].includes(xsiType.local)
+      ) {
+        // Ignore xsi:type for base non-abstract classes
+      } else {
+        attributesUnsorted[attr.name] = xsiType;
+      }
+    } else if (attr.name === "translatorVersion") {
+      // Ignore translatorVersion
     } else {
       attributesUnsorted[attr.name] = attr.value;
     }
@@ -81,10 +94,7 @@ for (const ig of igs) {
     const masterXmlString = fs.readFileSync(masterXmlFilePath, "utf8");
     const kotlinXmlString = fs.readFileSync(kotlinXmlFilePath, "utf8");
 
-    const masterXml = parser.parseFromString(
-      masterXmlString.split('translatorVersion="3.23.0-SNAPSHOT"').join(""), // TODO: check why it's missing in kotlin
-      "text/xml",
-    );
+    const masterXml = parser.parseFromString(masterXmlString, "text/xml");
     const kotlinXml = parser.parseFromString(
       kotlinXmlString
         // Regression: Some characters are not escaped in ELM XML
@@ -100,19 +110,19 @@ for (const ig of igs) {
       normalizeXmlToString(masterXml.documentElement) !==
       normalizeXmlToString(kotlinXml.documentElement)
     ) {
-      console.log("Different", xmlFileRelativePath);
+      console.log("Different:", repo, xmlFileRelativePath);
       fs.writeFileSync(
-        "for-diff-master",
+        "for-diff-master-" +
+          repo.split("/").join("-") +
+          xmlFileRelativePath.split("/").join("-").split(".").join("-"),
         normalizeXmlToString(masterXml.documentElement),
       );
       fs.writeFileSync(
-        "for-diff-kotlin",
+        "for-diff-kotlin-" +
+          repo.split("/").join("-") +
+          xmlFileRelativePath.split("/").join("-").split(".").join("-"),
         normalizeXmlToString(kotlinXml.documentElement),
       );
-      console.log("Stopping");
-      process.exit(0);
     }
   }
-
-  console.log("Everything is the same!");
 }

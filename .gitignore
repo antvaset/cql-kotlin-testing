@@ -2,5 +2,5 @@
 node_modules
 tmp
 config.js
-for-diff-master
-for-diff-kotlin
+for-diff-master*
+for-diff-kotlin*
