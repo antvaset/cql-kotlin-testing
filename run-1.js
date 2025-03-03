@@ -11,37 +11,39 @@ execSync(`cd ${kotlinSrc} && ./gradlew :cql-to-elm-cli:installDist`, {
   stdio: "inherit",
 });
 
-// Clean up tmp
-execSync(`rm -rf ${__dirname}/tmp && mkdir ${__dirname}/tmp`, {
-  stdio: "inherit",
-});
-
 for (const ig of igs) {
   const { repo } = ig;
   const dir = repo.split("/")[1];
 
-  // Clone the IG repo
+  // Create the master and kotlin directories to store the ELM XML and ELM JSON output
   execSync(
-    `cd ${__dirname}/tmp && git clone --depth=1 git@github.com:${ig.repo}.git ${dir}`,
-    { stdio: "inherit" },
+    `cd ${__dirname}/tmp/${dir} && mkdir -p master && mkdir -p kotlin && mkdir -p master-json && mkdir -p kotlin-json`,
+    {
+      stdio: "inherit",
+    },
   );
-
-  // Create the master and kotlin directories to store the ELM output
-  execSync(`cd ${__dirname}/tmp/${dir} && mkdir master && mkdir kotlin`, {
-    stdio: "inherit",
-  });
 
   // Look for input CQL
   for (const inputSubdir of inputSubdirs) {
     const inputDir = `${__dirname}/tmp/${dir}${inputSubdir}`;
     if (fs.existsSync(inputDir)) {
-      // Compile CQL
+      // Compile CQL to ELM XML
       execSync(
         `cd ${masterSrc} && ./cql-to-elm-cli/build/install/cql-to-elm-cli/bin/cql-to-elm-cli --input ${inputDir} --output ${__dirname}/tmp/${dir}/master`,
         { stdio: "inherit" },
       );
       execSync(
         `cd ${kotlinSrc} && ./cql-to-elm-cli/build/install/cql-to-elm-cli/bin/cql-to-elm-cli --input ${inputDir} --output ${__dirname}/tmp/${dir}/kotlin`,
+        { stdio: "inherit" },
+      );
+
+      // Compile CQL to ELM JSON
+      execSync(
+        `cd ${masterSrc} && ./cql-to-elm-cli/build/install/cql-to-elm-cli/bin/cql-to-elm-cli --input ${inputDir} --output ${__dirname}/tmp/${dir}/master-json --format JSON`,
+        { stdio: "inherit" },
+      );
+      execSync(
+        `cd ${kotlinSrc} && ./cql-to-elm-cli/build/install/cql-to-elm-cli/bin/cql-to-elm-cli --input ${inputDir} --output ${__dirname}/tmp/${dir}/kotlin-json --format JSON`,
         { stdio: "inherit" },
       );
     }

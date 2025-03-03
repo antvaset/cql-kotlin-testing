@@ -75,6 +75,11 @@ module.exports.igs = [
   {
     repo: "cqframework/hedis-ig-r4",
   },
+
+  // Local
+  {
+    repo: "local/2025-eCQM",
+  },
 ];
 
 module.exports.inputSubdirs = ["/input/cql", "/input/pagecontent/cql"];

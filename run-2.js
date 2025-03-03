@@ -42,8 +42,6 @@ function normalizeXml(node, namespacesFromParents) {
     if (attr.name.startsWith("xmlns")) {
       // skip
     } else if (attr.name === "xsi:type") {
-      // Ignore xsi:type
-
       const xsiType = parseIntoQname(attr.value, allNamespaces);
       if (
         [
@@ -59,6 +57,9 @@ function normalizeXml(node, namespacesFromParents) {
       }
     } else if (attr.name === "translatorVersion") {
       // Ignore translatorVersion
+    } else if (/^\w+:/.test(attr.value)) {
+      // Parse as QName
+      attributesUnsorted[attr.name] = parseIntoQname(attr.value, allNamespaces);
     } else {
       attributesUnsorted[attr.name] = attr.value;
     }
@@ -75,6 +76,42 @@ function normalizeXml(node, namespacesFromParents) {
 
 function normalizeXmlToString(node) {
   return JSON.stringify(normalizeXml(node), null, 2);
+}
+
+function normalizeJson(element) {
+  if (Array.isArray(element)) {
+    return element.map(normalizeJson);
+  }
+  if (element && typeof element === "object") {
+    const keys = Object.keys(element).sort((a, b) => a.localeCompare(b));
+    const obj = {};
+    for (const key of keys) {
+      if (key === "type") {
+        if (
+          [
+            "AliasedQuerySource",
+            "Property",
+            "ExpressionRef",
+            "ExpressionDef",
+          ].includes(element[key])
+        ) {
+          // Ignore xsi:type for base non-abstract classes
+        } else {
+          obj[key] = normalizeJson(element[key]);
+        }
+      } else if (key === "translatorVersion") {
+        // Ignore translatorVersion
+      } else {
+        obj[key] = normalizeJson(element[key]);
+      }
+    }
+    return obj;
+  }
+  return element;
+}
+
+function normalizeJsonToString(element) {
+  return JSON.stringify(normalizeJson(element), null, 2);
 }
 
 for (const ig of igs) {
@@ -110,7 +147,7 @@ for (const ig of igs) {
       normalizeXmlToString(masterXml.documentElement) !==
       normalizeXmlToString(kotlinXml.documentElement)
     ) {
-      console.log("Different:", repo, xmlFileRelativePath);
+      console.log("Different XML:", repo, xmlFileRelativePath);
       fs.writeFileSync(
         "for-diff-master-" +
           repo.split("/").join("-") +
@@ -122,6 +159,37 @@ for (const ig of igs) {
           repo.split("/").join("-") +
           xmlFileRelativePath.split("/").join("-").split(".").join("-"),
         normalizeXmlToString(kotlinXml.documentElement),
+      );
+    }
+  }
+
+  for (const xmlFileRelativePath of xmlFileRelativePaths) {
+    const jsonFileRelativePath =
+      xmlFileRelativePath.slice(0, -".xml".length) + ".json";
+
+    const masterJsonFilePath = `${__dirname}/tmp/${dir}/master-json/${jsonFileRelativePath}`;
+    const kotlinJsonFilePath = `${__dirname}/tmp/${dir}/kotlin-json/${jsonFileRelativePath}`;
+    const masterJsonString = fs.readFileSync(masterJsonFilePath, "utf8");
+    const kotlinJsonString = fs.readFileSync(kotlinJsonFilePath, "utf8");
+
+    const masterJson = JSON.parse(masterJsonString);
+    const kotlinJson = JSON.parse(kotlinJsonString);
+
+    if (
+      normalizeJsonToString(masterJson) !== normalizeJsonToString(kotlinJson)
+    ) {
+      console.log("Different JSON:", repo, jsonFileRelativePath);
+      fs.writeFileSync(
+        "for-diff-master-" +
+          repo.split("/").join("-") +
+          jsonFileRelativePath.split("/").join("-").split(".").join("-"),
+        normalizeJsonToString(masterJson),
+      );
+      fs.writeFileSync(
+        "for-diff-kotlin-" +
+          repo.split("/").join("-") +
+          jsonFileRelativePath.split("/").join("-").split(".").join("-"),
+        normalizeJsonToString(kotlinJson),
       );
     }
   }
