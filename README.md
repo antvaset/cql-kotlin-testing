@@ -9,6 +9,6 @@
 
 ```shell
 npm install
-npm run-1.js
-npm run-2.js
+node run-1.js
+node run-2.js
 ```
