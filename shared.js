@@ -82,4 +82,8 @@ module.exports.igs = [
   },
 ];
 
-module.exports.inputSubdirs = ["/input/cql", "/input/pagecontent/cql"];
+module.exports.inputSubdirs = [
+  "/input/cql",
+  "/input/pagecontent/cql",
+  "/src/cql",
+];
