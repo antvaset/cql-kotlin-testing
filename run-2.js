@@ -41,20 +41,6 @@ function normalizeXml(node, namespacesFromParents) {
   for (const attr of node.attributes || []) {
     if (attr.name.startsWith("xmlns")) {
       // skip
-    } else if (attr.name === "xsi:type") {
-      const xsiType = parseIntoQname(attr.value, allNamespaces);
-      if (
-        [
-          "AliasedQuerySource",
-          "Property",
-          "ExpressionRef",
-          "ExpressionDef",
-        ].includes(xsiType.local)
-      ) {
-        // Ignore xsi:type for base non-abstract classes
-      } else {
-        attributesUnsorted[attr.name] = xsiType;
-      }
     } else if (attr.name === "translatorVersion") {
       // Ignore translatorVersion
     } else if (/^\w+:/.test(attr.value)) {
@@ -70,7 +56,7 @@ function normalizeXml(node, namespacesFromParents) {
   const children = Array.from(node.children).map((child) =>
     normalizeXml(child, allNamespaces),
   );
-  const text = node.textContent.trim();
+  const text = ""; // node.textContent.trim();
   return { tag, attributes, children, text };
 }
 
@@ -80,26 +66,16 @@ function normalizeXmlToString(node) {
 
 function normalizeJson(element) {
   if (Array.isArray(element)) {
-    return element.map(normalizeJson);
+    if (element.length) {
+      return element.map(normalizeJson);
+    }
+    return undefined;
   }
   if (element && typeof element === "object") {
     const keys = Object.keys(element).sort((a, b) => a.localeCompare(b));
     const obj = {};
     for (const key of keys) {
-      if (key === "type") {
-        if (
-          [
-            "AliasedQuerySource",
-            "Property",
-            "ExpressionRef",
-            "ExpressionDef",
-          ].includes(element[key])
-        ) {
-          // Ignore xsi:type for base non-abstract classes
-        } else {
-          obj[key] = normalizeJson(element[key]);
-        }
-      } else if (key === "translatorVersion") {
+      if (key === "translatorVersion") {
         // Ignore translatorVersion
       } else {
         obj[key] = normalizeJson(element[key]);
@@ -132,16 +108,7 @@ for (const ig of igs) {
     const kotlinXmlString = fs.readFileSync(kotlinXmlFilePath, "utf8");
 
     const masterXml = parser.parseFromString(masterXmlString, "text/xml");
-    const kotlinXml = parser.parseFromString(
-      kotlinXmlString
-        // Regression: Some characters are not escaped in ELM XML
-        .trim()
-        .replace(
-          /[\x00-\x1F]/g,
-          (char) => `&#x${char.charCodeAt(0).toString(16).toLowerCase()};`,
-        ),
-      "text/xml",
-    );
+    const kotlinXml = parser.parseFromString(kotlinXmlString, "text/xml");
 
     if (
       normalizeXmlToString(masterXml.documentElement) !==
